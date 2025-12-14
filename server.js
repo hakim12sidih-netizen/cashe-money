@@ -26,9 +26,16 @@ app.use(express.static(__dirname));
 // On récupère les clés depuis les variables d'environnement de manière sécurisée.
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
-const client = twilio(accountSid, authToken);
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 
+// On vérifie que toutes les clés sont bien présentes AVANT d'initialiser Twilio
+if (!accountSid || !authToken || !twilioPhoneNumber) {
+    console.error("Erreur critique: Une ou plusieurs variables d'environnement Twilio sont manquantes.");
+    console.error("Veuillez vérifier TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, et TWILIO_PHONE_NUMBER sur Render.");
+    process.exit(1); // Arrête le serveur si les clés sont manquantes
+}
+
+const client = twilio(accountSid, authToken);
 
 // Route pour la page d'accueil
 app.get('/', (req, res) => {
@@ -37,29 +44,33 @@ app.get('/', (req, res) => {
 
 // 5. Le plus important : L'endroit où le serveur "prend" les informations
 // On dit au serveur : "Quand tu reçois une requête HTTP POST sur l'URL '/send-sms'..."
-app.post('/send-sms', (req, res) => {
+app.post('/send-sms', async (req, res) => {
     console.log("Requête reçue sur /send-sms");
 
     // "...prends les données qui ont été envoyées dans le corps (body) de la requête."
     const { to, text } = req.body; 
     
+    if (!to || !text) {
+        return res.status(400).json({ success: false, message: "Données de la requête manquantes." });
+    }
+
     // Adaptez le préfixe à votre pays. Par exemple, +228 pour le Togo, +33 pour la France.
     const destinationNumberWithCountryCode = '+228' + to;
 
     console.log(`Tentative d'envoi du SMS à ${destinationNumberWithCountryCode}`);
 
-    // On utilise le client Twilio pour envoyer le vrai SMS
-    client.messages.create({
-        body: text,
-        from: twilioPhoneNumber,
-        to: destinationNumberWithCountryCode
-    }).then(message => {
+    try {
+        const message = await client.messages.create({
+            body: text,
+            from: twilioPhoneNumber,
+            to: destinationNumberWithCountryCode
+        });
         console.log('SMS envoyé avec succès ! SID:', message.sid);
         res.status(200).json({ success: true, message: 'SMS envoyé !' });
-    }).catch(error => {
+    } catch (error) {
         console.error('Erreur lors de l\'envoi du SMS:', error);
-        res.status(500).json({ success: false, message: 'Erreur lors de l\'envoi du SMS' });
-    });
+        res.status(500).json({ success: false, message: 'Erreur lors de la communication avec le service SMS.' });
+    }
 });
 
 // 6. Démarrage du serveur
