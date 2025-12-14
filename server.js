@@ -1,12 +1,28 @@
 // --- server.js ---
 
 const path = require('path');
-// 0. Charger les variables d'environnement depuis le fichier .env
-require('dotenv').config();
+// 0. Charger les variables d'environnement depuis le fichier .env (si installé)
+try {
+    require('dotenv').config();
+} catch (err) {
+    console.warn('Module `dotenv` introuvable — continuez sans .env ou installez-le avec `npm install dotenv`.');
+}
 
 // 1. On importe les librairies nécessaires
-const express = require('express'); // Framework pour créer le serveur web
-const twilio = require('twilio');   // Librairie pour le service d'envoi de SMS
+let express;
+try {
+    express = require('express'); // Framework pour créer le serveur web
+} catch (err) {
+    console.error('Module `express` introuvable. Exécutez `npm install` dans le dossier du projet pour installer les dépendances.');
+    process.exit(1);
+}
+
+let twilio = null;
+try {
+    twilio = require('twilio');   // Librairie pour le service d'envoi de SMS
+} catch (err) {
+    console.warn('Module `twilio` introuvable — le mode mock SMS sera utilisé si activé. Pour installer: `npm install twilio`.');
+}
 
 // 2. Initialisation du serveur Express
 const app = express();
@@ -29,13 +45,29 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 
 // On vérifie que toutes les clés sont bien présentes AVANT d'initialiser Twilio
-if (!accountSid || !authToken || !twilioPhoneNumber) {
-    console.error("Erreur critique: Une ou plusieurs variables d'environnement Twilio sont manquantes.");
-    console.error("Veuillez vérifier TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, et TWILIO_PHONE_NUMBER sur Render.");
-    process.exit(1); // Arrête le serveur si les clés sont manquantes
-}
+// Activer le mode mock si `MOCK_SMS=true` ou `TWILIO_MOCK=true` dans .env
+const MOCK_SMS = process.env.MOCK_SMS === 'true' || process.env.TWILIO_MOCK === 'true';
 
-const client = twilio(accountSid, authToken);
+let client = null;
+// Si les variables Twilio manquent ou si la librairie `twilio` est absente, on bascule en mode non-configuré / mock
+if (!accountSid || !authToken || !twilioPhoneNumber || !twilio) {
+    console.warn("Attention: Une ou plusieurs variables d'environnement Twilio sont manquantes.");
+    console.warn("Le serveur démarrera, mais l'envoi de SMS réel sera désactivé en local.");
+
+    if (MOCK_SMS) {
+        console.info("Mode MOCK_SMS activé — utilisation d'un client Twilio factice.");
+        client = {
+            messages: {
+                create: async ({ body, from, to }) => {
+                    console.log('MOCK SMS envoyé —', { to, from, body });
+                    return { sid: `MOCK-${Date.now()}` };
+                }
+            }
+        };
+    }
+} else {
+    client = twilio(accountSid, authToken);
+}
 
 // Route pour la page d'accueil
 app.get('/', (req, res) => {
@@ -60,6 +92,13 @@ app.post('/send-sms', async (req, res) => {
     console.log(`Tentative d'envoi du SMS à ${destinationNumberWithCountryCode}`);
 
     try {
+        // Si Twilio n'est pas configuré, on répond clairement sans planter
+        if (!client) {
+            console.warn('Tentative d\'envoi de SMS alors que Twilio n\'est pas configuré.');
+            return res.status(503).json({ success: false, message: 'Service SMS non configuré sur le serveur.' });
+        }
+
+        // On utilise le client Twilio pour envoyer le vrai SMS avec await
         const message = await client.messages.create({
             body: text,
             from: twilioPhoneNumber,
@@ -76,4 +115,12 @@ app.post('/send-sms', async (req, res) => {
 // 6. Démarrage du serveur
 app.listen(PORT, () => {
     console.log(`Serveur démarré. Ouvrez http://localhost:${PORT} dans votre navigateur.`);
+});
+
+// Route de diagnostic pour vérifier l'état du mock et la configuration Twilio
+app.get('/mock-status', (req, res) => {
+    res.json({
+        mockEnabled: MOCK_SMS,
+        twilioConfigured: !!(accountSid && authToken && twilioPhoneNumber && client),
+    });
 });
