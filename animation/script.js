@@ -89,6 +89,8 @@ requestAnimationFrame(gameLoop);
 // --- GESTION DU FORMULAIRE DE TRANSACTION ---
 
 const transactionForm = document.getElementById('transactionForm');
+const statusMessageDiv = document.getElementById('statusMessage');
+const submitButton = transactionForm.querySelector('button');
 
 /**
  * Fonction pour envoyer les données de transaction à un serveur.
@@ -110,8 +112,11 @@ async function sendTransactionSms(data) {
     console.log("À:", destinationNumber);
     console.log("Message:", message);
 
-    // NOTE : Le code ci-dessous est un EXEMPLE de ce qu'on ferait
-    // pour appeler un serveur. Il ne fonctionnera pas sans un vrai serveur.
+    // Désactive le bouton et affiche un message de chargement
+    submitButton.disabled = true;
+    submitButton.textContent = 'Envoi en cours...';
+    statusMessageDiv.style.display = 'none';
+
     try {
         // On appelle notre serveur local sur le endpoint /send-sms
         const response = await fetch('/send-sms', { 
@@ -119,20 +124,36 @@ async function sendTransactionSms(data) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ to: destinationNumber, text: message })
         });
-        
+
+        const result = await response.json();
+
         if (response.ok) { // response.ok est vrai si le statut est 200-299
-            alert('Notification envoyée avec succès !');
+            statusMessageDiv.textContent = 'Notification envoyée avec succès !';
+            statusMessageDiv.className = 'success';
+            transactionForm.reset(); // Réinitialise le formulaire
         } else {
-            alert("Échec de l'envoi de la notification. Le serveur a répondu par une erreur.");
+            statusMessageDiv.textContent = `Échec : ${result.message || 'Le serveur a répondu par une erreur.'}`;
+            statusMessageDiv.className = 'error';
         }
     } catch (error) {
         console.error("Erreur lors de l'envoi de la notification:", error);
-        alert("Échec de l'envoi de la notification. Voir la console pour les détails.");
+        statusMessageDiv.textContent = 'Échec de la connexion au serveur. Vérifiez votre connexion internet.';
+        statusMessageDiv.className = 'error';
+    } finally {
+        // Réactive le bouton et affiche le message dans tous les cas
+        submitButton.disabled = false;
+        submitButton.textContent = 'Envoyer la notification';
+        statusMessageDiv.style.display = 'block';
     }
 }
 
 transactionForm.addEventListener('submit', (event) => {
     event.preventDefault(); // Empêche la page de se recharger
+
+    if (document.getElementById('provider').value === "") {
+        alert('Veuillez choisir un moyen de paiement.');
+        return;
+    }
 
     const data = {
         phone: document.getElementById('phone').value,

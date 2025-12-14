@@ -34,6 +34,21 @@
             border: 1px solid #ccc;
             box-sizing: border-box;
         }
+        #statusMessage {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            display: none; /* Caché par défaut */
+            text-align: center;
+        }
+        #statusMessage.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        #statusMessage.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -57,6 +72,8 @@
                 <option value="Zamani Cash">Zamani Cash</option>
             </select>
             <button type="submit">Envoyer la notification</button>
+            <!-- Zone pour afficher les messages de statut -->
+            <div id="statusMessage"></div>
         </form>
     </div>
 
