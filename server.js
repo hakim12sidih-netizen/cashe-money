@@ -10,7 +10,8 @@ const twilio = require('twilio');   // Librairie pour le service d'envoi de SMS
 
 // 2. Initialisation du serveur Express
 const app = express();
-const PORT = 3000; // Le "port" sur lequel notre serveur va écouter. C'est comme un numéro de porte.
+// Render fournit le port via une variable d'environnement, sinon on utilise 3000 en local.
+const PORT = process.env.PORT || 3000;
 
 // 3. Configuration du serveur
 // Cette ligne est CRUCIALE. Elle permet au serveur de comprendre le JSON envoyé par le frontend.
