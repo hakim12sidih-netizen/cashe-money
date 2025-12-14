@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Tick - Animation</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Empêche les barres de défilement */
+            background-color: #f0f0f0;
+        }
+        canvas {
+            display: block; /* S'assure que le canvas n'a pas d'espace en dessous */
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1; /* Place le canvas en arrière-plan */
+        }
+        .form-container {
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 50px;
+            width: 300px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            font-family: sans-serif;
+        }
+        .form-container input, .form-container select, .form-container button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <!-- La toile sur laquelle notre animation sera dessinée -->
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="form-container">
+        <h3>Envoyer une transaction</h3>
+        <form id="transactionForm">
+            <input type="tel" id="phone" placeholder="Numéro de téléphone" required>
+            <input type="text" id="name" placeholder="Nom" required>
+            <input type="number" id="amount" placeholder="Montant" required>
+            <select id="type" required>
+                <option value="depot">Dépôt</option>
+                <option value="retrait">Retrait</option>
+            </select>
+            <select id="provider" required>
+                <option value="" disabled selected>Choisir le moyen de paiement</option>
+                <option value="Airtel Money">Airtel Money</option>
+                <option value="Moov Money">Moov Money</option>
+                <option value="Zamani Cash">Zamani Cash</option>
+            </select>
+            <button type="submit">Envoyer la notification</button>
+        </form>
+    </div>
+
+    <!-- On charge notre script JavaScript à la fin du body -->
+    <script src="script.js"></script>
+</body>
+</html>
