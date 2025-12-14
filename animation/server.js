@@ -1,5 +1,6 @@
 // --- server.js ---
 
+const path = require('path');
 // 0. Charger les variables d'environnement depuis le fichier .env
 require('dotenv').config();
 
@@ -27,6 +28,11 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 
+
+// Route pour la page d'accueil
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // 5. Le plus important : L'endroit où le serveur "prend" les informations
 // On dit au serveur : "Quand tu reçois une requête HTTP POST sur l'URL '/send-sms'..."
